@@ -10,11 +10,6 @@ on:
     tags:
     - '*'
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Branch or tag to run on'
-        required: true
-        default: 'main'
 
 concurrency:
   group: ${{ github.ref }}
@@ -30,9 +25,7 @@ jobs:
       shell: bash
       id: max-parallel
       run: |
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
-          echo "p={\"v\": 1}" >> $GITHUB_OUTPUT
-        elif [[ "${{ github.ref_name }}" == "2027" ]]; then
+        if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "2027" ]]; then
           echo "p={\"v\": 1}" >> $GITHUB_OUTPUT
         else
           echo "p={\"v\": 10000}" >> $GITHUB_OUTPUT
@@ -55,10 +48,20 @@ jobs:
       image: "${{ matrix.os.container }}"
 
     steps:
+    - name: Normalize ref
+      id: ref
+      run: |
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          # strip refs/tags/ to get tag name
+          echo "ref_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "ref_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+        fi
+
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: ${{ github.event.inputs.ref || github.ref }}
+        ref: ${{ steps.ref.outputs.ref_name }}
 
     - name: Setup cross environment for meson
       uses: robotpy/build-actions/setup-cross-meson@semiwrap
