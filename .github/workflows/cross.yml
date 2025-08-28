@@ -1,0 +1,81 @@
+---
+name: dist
+
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+    - '2027'
+    tags:
+    - '*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup_concurrency:
+    runs-on: ubuntu-24.04
+    outputs:
+      max-parallel: ${{ steps.max-parallel.outputs.p }}
+    steps:
+    - name: Setup concurrency
+      shell: bash
+      id: max-parallel
+      run: |
+        if [[ "${{ github.ref_name }}" == "main" ]]; then
+          echo "p={\"v\": 1}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref_name }}" == "2027" ]]; then
+          echo "p={\"v\": 1}" >> $GITHUB_OUTPUT
+        else
+          echo "p={\"v\": 10000}" >> $GITHUB_OUTPUT
+        fi
+
+  cross-meson:
+    runs-on: ubuntu-24.04
+    needs: [setup_concurrency]
+    strategy:
+      max-parallel: ${{ fromJSON(needs.setup_concurrency.outputs.max-parallel).v }}
+      matrix:
+        os:
+        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py311
+          name: raspbian-py311
+        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py312
+          name: raspbian-py312
+        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py313
+          name: raspbian-py313
+
+    container:
+      image: "${{ matrix.os.container }}"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup cross environment for meson
+      uses: robotpy/build-actions/setup-cross-meson@semiwrap
+
+    - run: apt-get update
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ matrix.os.container }}
+        variant: ccache
+
+    - name: Install deps
+      shell: bash
+      run: |
+        /build/venv/bin/cross-pip --disable-pip-version-check install -r rdev_requirements.txt
+
+    - name: Build wheels
+      shell: bash
+      run: |
+        /build/venv/bin/cross-python -m devtools ci build-meson-wheels --no-test --cross=cross.txt
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: cross-meson-${{ matrix.os.name }}
+        path: dist
