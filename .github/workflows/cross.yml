@@ -2,14 +2,13 @@
 name: cross
 
 on:
-  pull_request:
-  push:
-    branches:
-    - main
-    - '2027'
-    tags:
-    - '*'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to build'
+        required: true
+        default: 'good_version'
+
 
 concurrency:
   group: ${{ github.ref }}
