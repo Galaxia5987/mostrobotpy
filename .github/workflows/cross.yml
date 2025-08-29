@@ -38,12 +38,10 @@ jobs:
       with:
         fetch-depth: 0
         ref: ${{ steps.ref.outputs.ref_name }}
-
-    - name: Install toolchain
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi
-        sudo apt-get install -y g++-arm-linux-gnueabihf
+    - uses: actions/download-artifact@v4
+      with:
+        name: "cross-other-${{ matrix.os.base }}"
+        path: dist-other
 
     - name: Setup cross environment for meson
       uses: robotpy/build-actions/setup-cross-meson@semiwrap
