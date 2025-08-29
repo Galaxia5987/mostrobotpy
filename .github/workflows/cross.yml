@@ -9,7 +9,6 @@ on:
         required: true
         default: 'good_version'
 
-
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
@@ -18,29 +17,22 @@ jobs:
   cross-meson:
     runs-on: ubuntu-24.04
     strategy:
-      max-parallel: ${{ fromJSON(needs.setup_concurrency.outputs.max-parallel).v }}
       matrix:
-        os:
-        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py311
-          name: raspbian-py311
-        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py312
-          name: raspbian-py312
-        - container: wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py313
-          name: raspbian-py313
+        os: [wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py310]
+        
 
     container:
       image: "${{ matrix.os.container }}"
 
     steps:
-    - name: Normalize ref
+    - name: Resolve ref
       id: ref
       run: |
-        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-          # strip refs/tags/ to get tag name
-          echo "ref_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        else
-          echo "ref_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-        fi
+        INPUT_REF="${{ github.event.inputs.ref }}"
+        # strip leading refs/ if user entered a full ref
+        CLEAN_REF="${INPUT_REF#refs/heads/}"
+        CLEAN_REF="${CLEAN_REF#refs/tags/}"
+        echo "ref_name=$CLEAN_REF" >> $GITHUB_OUTPUT
 
     - uses: actions/checkout@v4
       with:
@@ -51,6 +43,7 @@ jobs:
       uses: robotpy/build-actions/setup-cross-meson@semiwrap
 
     - run: apt-get update
+
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
