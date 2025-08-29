@@ -15,23 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup_concurrency:
-    runs-on: ubuntu-24.04
-    outputs:
-      max-parallel: ${{ steps.max-parallel.outputs.p }}
-    steps:
-    - name: Setup concurrency
-      shell: bash
-      id: max-parallel
-      run: |
-        if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "2027" ]]; then
-          echo "p={\"v\": 1}" >> $GITHUB_OUTPUT
-        else
-          echo "p={\"v\": 10000}" >> $GITHUB_OUTPUT
-
   cross-meson:
     runs-on: ubuntu-24.04
-    needs: [setup_concurrency]
     strategy:
       max-parallel: ${{ fromJSON(needs.setup_concurrency.outputs.max-parallel).v }}
       matrix:
