@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        os: [wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py310]
+        os: [wpilib/raspbian-cross-ubuntu:2025-bookworm-24.04-py311]
         
 
     container:
